@@ -25,6 +25,7 @@ class PathType(enum.Enum):
     LINEAR = enum.auto()
     GVP = enum.auto()
     VP = enum.auto()
+    COUETTE = enum.auto()
 
 class WeightType(enum.Enum):
     """
@@ -46,6 +47,7 @@ class Transport:
         loss_type,
         train_eps,
         sample_eps,
+        path_sampler=None,
     ):
         path_options = {
             PathType.LINEAR: path.ICPlan,
@@ -55,7 +57,10 @@ class Transport:
 
         self.loss_type = loss_type
         self.model_type = model_type
-        self.path_sampler = path_options[path_type]()
+        if path_sampler is not None:
+            self.path_sampler = path_sampler
+        else:
+            self.path_sampler = path_options[path_type]()
         self.train_eps = train_eps
         self.sample_eps = sample_eps
 
@@ -84,6 +89,7 @@ class Transport:
         t0 = 0
         t1 = 1
         eps = train_eps if not eval else sample_eps
+        from .couette import CouettePath  # local import to avoid cycles
         if (type(self.path_sampler) in [path.VPCPlan]):
 
             t1 = 1 - eps if (not sde or last_step_size == 0) else 1 - last_step_size
@@ -93,6 +99,13 @@ class Transport:
 
             t0 = eps if (diffusion_form == "SBDM" and sde) or self.model_type != ModelType.VELOCITY else 0
             t1 = 1 - eps if (not sde or last_step_size == 0) else 1 - last_step_size
+
+        elif isinstance(self.path_sampler, CouettePath):
+            # sigma'(t_prompt) -> +infinity as t_prompt -> 0+, which under the
+            # Transport convention is t -> 1-. Clamp accordingly.
+            t1 = 1 - eps if (not sde or last_step_size == 0) else 1 - last_step_size
+            if self.model_type != ModelType.VELOCITY or sde:
+                t0 = eps if (diffusion_form == "SBDM" and sde) or self.model_type != ModelType.VELOCITY else 0
         
         if reverse:
             t0, t1 = 1 - t0, 1 - t1
@@ -129,7 +142,10 @@ class Transport:
             model_kwargs = {}
         
         t, x0, x1 = self.sample(x1)
-        t, xt, ut = self.path_sampler.plan(t, x0, x1)
+        if hasattr(self.path_sampler, "plan_transport"):
+            t, xt, ut = self.path_sampler.plan_transport(t, x0, x1)
+        else:
+            t, xt, ut = self.path_sampler.plan(t, x0, x1)
         model_output = model(xt, t, **model_kwargs)
         B, *_, C = xt.shape
         assert model_output.size() == (B, *xt.size()[1:-1], C)

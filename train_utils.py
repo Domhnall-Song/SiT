@@ -5,11 +5,23 @@ def none_or_str(value):
 
 def parse_transport_args(parser):
     group = parser.add_argument_group("Transport arguments")
-    group.add_argument("--path-type", type=str, default="Linear", choices=["Linear", "GVP", "VP"])
+    group.add_argument("--path-type", type=str, default="Linear", choices=["Linear", "GVP", "VP", "Couette"])
     group.add_argument("--prediction", type=str, default="velocity", choices=["velocity", "score", "noise"])
     group.add_argument("--loss-weight", type=none_or_str, default=None, choices=[None, "velocity", "likelihood"])
     group.add_argument("--sample-eps", type=float)
     group.add_argument("--train-eps", type=float)
+    # --- Couette path options ---
+    group.add_argument("--couette-mode", type=str, default="time", choices=["time", "freq"])
+    group.add_argument("--couette-eta-max", type=float, default=3.0)
+    group.add_argument("--couette-nu", type=float, default=1.0)
+    group.add_argument("--couette-tau-max", type=float, default=None)
+    group.add_argument("--couette-alpha-min", type=float, default=1e-4)
+    group.add_argument(
+        "--couette-freq-axes",
+        type=lambda s: tuple(int(x) for x in s.split(",")),
+        default=(-2, -1),
+        help="Comma-separated axes used by the freq-mode FFT (e.g. '-2,-1').",
+    )
 
 def parse_ode_args(parser):
     group = parser.add_argument_group("ODE arguments")
