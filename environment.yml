@@ -1,0 +1,19 @@
+name: SiT
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python = 3.10
+  - pip
+  - pip:
+    - --index-url https://pypi.org/simple
+    - --extra-index-url https://download.pytorch.org/whl/cu124
+    - torch==2.5.1+cu124
+    - torchvision==0.20.1+cu124
+    - torchaudio==2.5.1+cu124
+    - diffusers
+    - timm
+    - einops
+    - accelerate
+    - torchdiffeq
+    - wandb
