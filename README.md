@@ -24,7 +24,7 @@ This repository contains:
 First, download and set up the repo:
 
 ```bash
-git clone https://github.com/willisma/SiT.git
+git clone https://github.com/Domhnall-Song/SiT.git
 cd SiT
 ```
 
