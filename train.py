@@ -36,6 +36,21 @@ import wandb_utils
 #                             Training Helper Functions                         #
 #################################################################################
 
+def create_transport_from_args(args):
+    return create_transport(
+        path_type=args.path_type,
+        prediction=args.prediction,
+        loss_weight=args.loss_weight,
+        train_eps=args.train_eps,
+        sample_eps=args.sample_eps,
+        couette_mode=getattr(args, "couette_mode", "time"),
+        couette_eta_max=getattr(args, "couette_eta_max", 3.0),
+        couette_nu=getattr(args, "couette_nu", 1.0),
+        couette_tau_max=getattr(args, "couette_tau_max", None),
+        couette_alpha_min=getattr(args, "couette_alpha_min", 1e-4),
+        couette_freq_axes=getattr(args, "couette_freq_axes", (-2, -1)),
+    )
+
 @torch.no_grad()
 def update_ema(ema_model, model, decay=0.9999):
     """
@@ -166,13 +181,7 @@ def main(args):
     requires_grad(ema, False)
     
     model = DDP(model.to(device), device_ids=[device])
-    transport = create_transport(
-        args.path_type,
-        args.prediction,
-        args.loss_weight,
-        args.train_eps,
-        args.sample_eps
-    )  # default: velocity; 
+    transport = create_transport_from_args(args)  # default: velocity;
     transport_sampler = Sampler(transport)
     vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-{args.vae}").to(device)
     logger.info(f"SiT Parameters: {sum(p.numel() for p in model.parameters()):,}")
